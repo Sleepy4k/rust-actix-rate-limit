@@ -1,0 +1,6 @@
+.env
+sqlx-data.json
+Cargo.lock
+.idea
+.vscode
+/target
