@@ -1,4 +1,3 @@
-use log::*;
 use actix::dev::*;
 use futures::task::Poll;
 use futures::{Future, future::{ok, Ready}};
@@ -31,6 +30,7 @@ where
   interval: Duration,
   max_requests: usize,
   store: Addr<T>,
+  #[allow(clippy::type_complexity)]
   identifier: Rc<Box<dyn Fn(&ServiceRequest) -> Result<String, AWError>>>,
 }
 
@@ -111,6 +111,7 @@ where
   store: Addr<T>,
   max_requests: usize,
   interval: u64,
+  #[allow(clippy::type_complexity)]
   identifier: Rc<Box<dyn Fn(&ServiceRequest) -> Result<String, AWError> + 'static>>,
 }
 
@@ -163,8 +164,6 @@ where
             };
 
             if c == 0 {
-              info!("Limit exceeded for client: {}", &identifier);
-
               Err(ARError::RateLimitError {
                 max_requests,
                 c,
@@ -222,13 +221,13 @@ where
 
             match res {
               ActorResponse::Set(c) => {
-                c.await.map_err(|err| ErrorInternalServerError(err))?
+                c.await.map_err(ErrorInternalServerError)?
               }
               _ => unreachable!(),
             }
 
             let fut = srv.call(req);
-            let mut res = fut.await.map_err(|err| ErrorInternalServerError(err))?;
+            let mut res = fut.await.map_err(ErrorInternalServerError)?;
             let headers = res.headers_mut();
 
             headers.insert(
