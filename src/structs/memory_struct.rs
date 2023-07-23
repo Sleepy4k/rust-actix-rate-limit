@@ -1,4 +1,3 @@
-use log::*;
 use std::sync::Arc;
 use dashmap::DashMap;
 use actix::prelude::*;
@@ -19,15 +18,14 @@ pub struct MemoryStore {
 }
 
 impl MemoryStore {
+  #[allow(clippy::new_without_default)]
   pub fn new() -> Self {
-    debug!("Creating new MemoryStore");
     MemoryStore {
       inner: Arc::new(DashMap::<String, (usize, Duration)>::new()),
     }
   }
 
   pub fn with_capacity(capacity: usize) -> Self {
-    debug!("Creating new MemoryStore");
     MemoryStore {
       inner: Arc::new(DashMap::<String, (usize, Duration)>::with_capacity(
         capacity,
@@ -48,7 +46,6 @@ impl From<MemoryStore> for MemoryStoreActor {
 
 impl MemoryStoreActor {
   pub fn start(self) -> Addr<Self> {
-    debug!("Started memory store");
     Supervisor::start(|_| self)
   }
 }
@@ -58,9 +55,7 @@ impl Actor for MemoryStoreActor {
 }
 
 impl Supervised for MemoryStoreActor {
-  fn restarting(&mut self, _: &mut Self::Context) {
-    debug!("Restarting memory store");
-  }
+  fn restarting(&mut self, _: &mut Self::Context) {}
 }
 
 impl Handler<ActorMessage> for MemoryStoreActor {
@@ -69,7 +64,6 @@ impl Handler<ActorMessage> for MemoryStoreActor {
   fn handle(&mut self, msg: ActorMessage, ctx: &mut Self::Context) -> Self::Result {
     match msg {
       ActorMessage::Set { key, value, expiry } => {
-        debug!("Inserting key {} with expiry {}", &key, &expiry.as_secs());
         let future_key = String::from(&key);
         let now = SystemTime::now();
         let now = now.duration_since(UNIX_EPOCH).unwrap();
@@ -94,7 +88,7 @@ impl Handler<ActorMessage> for MemoryStoreActor {
           ActorResponse::Update(Box::pin(future::ready(Ok(new_val))))
         }
         None => {
-          return ActorResponse::Update(Box::pin(future::ready(Err(
+          ActorResponse::Update(Box::pin(future::ready(Err(
             ARError::ReadWriteError("memory store: read failed!".to_string()),
           ))))
         }
@@ -134,7 +128,6 @@ impl Handler<ActorMessage> for MemoryStoreActor {
         ActorResponse::Expire(Box::pin(future::ready(Ok(res))))
       }
       ActorMessage::Remove(key) => {
-        debug!("Removing key: {}", &key);
         let val = match self.inner.remove::<String>(&key) {
           Some(c) => c,
           None => {
